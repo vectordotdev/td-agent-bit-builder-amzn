@@ -137,16 +137,17 @@ index 00000000..18b9652c
 +
 +exit $?
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d78efad4..47b4049b 100644
+index d78efad4..2a03374a 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -276,7 +276,10 @@ if(FLB_BINARY)
+@@ -276,7 +276,11 @@ if(FLB_BINARY)
      install(FILES ${FLB_SYSTEMD_SCRIPT} DESTINATION /lib/systemd/system)
      install(DIRECTORY DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/${FLB_OUT_NAME}/")
    else()
 -    # FIXME: should we support Sysv init script ?
 +    install(FILES
 +      "${PROJECT_SOURCE_DIR}/init/fluent-bit.sysv"
++      PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 +      DESTINATION "/etc/init.d/"
 +      RENAME "${FLB_OUT_NAME}")
    endif()
