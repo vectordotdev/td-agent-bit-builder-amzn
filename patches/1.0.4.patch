@@ -1,0 +1,154 @@
+diff --git a/conf/fluent-bit.conf b/conf/fluent-bit.conf
+index 00aff072..297821ac 100644
+--- a/conf/fluent-bit.conf
++++ b/conf/fluent-bit.conf
+@@ -4,11 +4,6 @@
+     # Set an interval of seconds before to flush records to a destination
+     Flush        5
+ 
+-    # Daemon
+-    # ======
+-    # Instruct Fluent Bit to run in foreground or background mode.
+-    Daemon       Off
+-
+     # Log_Level
+     # =========
+     # Set the verbosity level of the service, values can be:
+@@ -26,7 +21,7 @@
+     # ============
+     # Specify an optional 'Parsers' configuration file
+     Parsers_File parsers.conf
+-    Plugins_File plugins.conf
++    # Plugins_File plugins.conf
+ 
+     # HTTP Server
+     # ===========
+diff --git a/init/fluent-bit.sysv b/init/fluent-bit.sysv
+new file mode 100755
+index 00000000..18b9652c
+--- /dev/null
++++ b/init/fluent-bit.sysv
+@@ -0,0 +1,107 @@
++#!/bin/sh
++### BEGIN INIT INFO
++# Provides:          td-agent-bit
++# Required-Start:    $network $local_fs
++# Required-Stop:     $network $local_fs
++# Default-Start:     2 3 4 5
++# Default-Stop:      0 1 6
++# Short-Description: data collector for Treasure Data
++# Description:       td-agent-bit is a data collector
++### END INIT INFO
++# pidfile:           /var/run/td-agent-bit/td-agent-bit.pid
++
++prog=td-agent-bit
++exec=/usr/local/bin/td-agent-bit
++log_file=/var/log/td-agent-bit/td-agent-bit.log
++pid_file=/var/run/td-agent-bit/td-agent-bit.pid
++conf_file=/etc/td-agent-bit/td-agent-bit.conf
++lockfile=/var/lock/subsys/$prog
++
++. /etc/init.d/functions
++
++[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
++
++if [ -n "${pid_file}" ]; then
++  mkdir -p "$(dirname "${pid_file}")"
++fi
++
++if [ -n "${log_file}" ]; then
++  mkdir -p "$(dirname "${log_file}")"
++fi
++
++#
++# Function that starts the daemon/service
++#
++start() {
++  [ -x $exec ] || exit 5
++  printf "Starting %s: " "$prog"
++  daemon --pidfile $pid_file $exec --daemon --log_file $log_file --config $conf_file
++  retval=$?
++  echo
++  [ $retval -eq 0 ] && touch $lockfile
++  return $retval
++}
++
++stop() {
++  printf "Stopping %s: " "$prog"
++  killproc $prog
++  retval=$?
++  echo
++  [ $retval -eq 0 ] && rm -f $lockfile
++  return $retval
++}
++
++restart() {
++  stop
++  start
++}
++
++reload() {
++  restart
++}
++
++force_reload() {
++  restart
++}
++
++rh_status() {
++  status $exec
++}
++
++rh_status_q() {
++  rh_status >/dev/null 2>&1
++}
++
++case "$1" in
++  start)
++    rh_status_q && exit 0
++    $1
++    ;;
++  stop)
++    rh_status_q || exit 0
++    $1
++    ;;
++  restart)
++    $1
++    ;;
++  reload)
++    rh_status_q || exit 7
++    $1
++    ;;
++  force-reload)
++    force_reload
++    ;;
++  status)
++    rh_status
++    ;;
++  condrestart|try-restart)
++    rh_status_q || exit 0
++    restart
++    ;;
++  *)
++    printf "Usage: %s {start|stop|status|restart|condrestart|try-restart|reload|force-reload}\n" "$0"
++    exit 2
++    ;;
++esac
++
++exit $?
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index d78efad4..47b4049b 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -276,7 +276,10 @@ if(FLB_BINARY)
+     install(FILES ${FLB_SYSTEMD_SCRIPT} DESTINATION /lib/systemd/system)
+     install(DIRECTORY DESTINATION "${CMAKE_INSTALL_SYSCONFDIR}/${FLB_OUT_NAME}/")
+   else()
+-    # FIXME: should we support Sysv init script ?
++    install(FILES
++      "${PROJECT_SOURCE_DIR}/init/fluent-bit.sysv"
++      DESTINATION "/etc/init.d/"
++      RENAME "${FLB_OUT_NAME}")
+   endif()
+ 
+   install(FILES
