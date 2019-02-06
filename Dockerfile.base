@@ -1,0 +1,10 @@
+FROM amazonlinux:2018.03
+
+RUN yum install -y \
+  cmake \
+  cmake3 \
+  gcc \
+  gcc-c++ \
+  initscripts \
+  rpm-build \
+  zlib-devel
